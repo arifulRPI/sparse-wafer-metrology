@@ -2,9 +2,9 @@
 
 **Predicting a wafer's full etch-depth map from a few measured sites, with an error bar at every site.**
 
-Semester project for MTLE-6730 (Materials Informatics), Rensselaer Polytechnic Institute, Fall 2026 · Ariful Islam · *Work in progress: part 3 of 4 done*
+Semester project for MTLE-6730 (Materials Informatics), Rensselaer Polytechnic Institute, Fall 2026 · Ariful Islam · *All four parts done*
 
-Part 1: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/01_core_reconstruction.ipynb) · Part 2: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/02_baselines_and_realism.ipynb) · Part 3: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/03_trust_and_sites.ipynb)
+Part 1: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/01_core_reconstruction.ipynb) · Part 2: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/02_baselines_and_realism.ipynb) · Part 3: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/03_trust_and_sites.ipynb) · Part 4: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/04_plan_and_cost.ipynb)
 
 ## The problem
 
@@ -13,6 +13,12 @@ After a deep-silicon etch, a fab checks the etch depth at a few sites on each wa
 ![The 89-site grid with the routine 9, and a real wafer's depth map](figures/question.png)
 
 **The question:** from a handful of measured sites, can we predict the whole map, including the edge, and say how sure we are at each site? Later parts ask how many sites to measure, where to put them, and whether keeping history is worth its cost.
+
+## The answer: a measurement plan
+
+**Measure each wafer at 5 sites chosen by the model, mostly at the edge. Re-measure a reading the input check questions. If the flag says the wafer is unlike past ones, measure its full map; otherwise predict the map with 90% ranges.** Learned only from earlier lots, as a fab would have to, this delivers the full 89-site map to **0.045 µm from 5 sites, against 0.067 µm from the routine 9** with the same model: a third less error from 43% fewer sites, better in 6 of 7 lots and tied on the seventh. On wafers the flag passes, the ranges hold 92%. The model needs fully measured reference wafers, spread over at least 2–3 lots; every added lot lowers the error.
+
+![The plan's sites, the value of history, and the plan lot by lot](figures/part4_plan.png)
 
 ## Approach
 
@@ -93,6 +99,25 @@ Notebook 03 makes every remaining choice on the training lots of each fold, by h
 
 ![Chosen sites, and error against the number of sites](figures/part3_sites.png)
 
+## Results, part 4: how many sites, how many full maps, and the plan
+
+Notebook 04 learns the whole plan (model version, range factor, check and flag thresholds, sites, and how many sites) from a set of training wafers only, then tests it three ways.
+
+| The plan, delivered map error (µm, RMS over all 89 sites) | Sites per wafer | Map error | Routine 9, same model |
+|---|---|---|---|
+| Learned from earlier lots only, lots 4–10 (the deployment number) | 5.1 | **0.045** | 0.067 |
+| Leave-one-lot-out, lots 1–10, flagged wafers fully measured | 15.7 | 0.037 | 0.067 |
+| Leave-one-lot-out, lots 1–10, flagged wafers given 13 sites | 6.2 | 0.043 | 0.067 |
+
+*Measured sites count as exact, and a flagged wafer that is fully measured has no error.*
+
+- **How many sites.** On the sites both leave unmeasured, 4 chosen sites match the routine 9 and 5 beat it in all 10 lots (0.047 vs 0.066 µm). The number is chosen on training lots: the fewest chosen sites that do no worse than the routine 9, but never fewer than the model's 5 shapes. Without that floor, the fold without lot 1 picks 3 sites, all in the upper left, and the flag then catches only 4 of lot 1's 9 wafers. The floor was added after seeing this.
+- **Part 3 dropped every reading the check questioned**, which cost lot 1 good readings. Part 4 re-measures instead (the repeat is assumed to agree for a good reading), which is why chosen sites do better here than in part 3.
+- **The deployment number.** Learned from earlier lots only, the plan is ×1.10 the leave-one-lot-out error on the same lots (edge ×1.07), inside the 1.25× pass rule set before testing. It flags no wafer of lots 4–10.
+- **Staleness.** A plan frozen after lots 1–3 is 13% worse over lots 4–10 and loses one of the seven lots to the routine 9. It degrades gradually.
+- **How many full maps.** Error falls with every lot of history, with no plateau within the 9 available: at 5 chosen sites, 0.118 µm from 1 lot, 0.091 from 3, 0.070 from 5 and 0.046 from 9. Ranges learned from a single lot hold only 75–80%. Full maps spread over lots beat the same number from one lot (8 wafers: 0.097 vs 0.108 µm, ranges 88% vs 75%).
+- **Cost.** Counted in sites (the dataset has no cost figures). Against the routine 9 with the same model, the plan saves 4 sites per wafer from the first wafer. Against the routine 9 without history, which never sees the edge, the reference maps pay for themselves after N = 89 R / s wafers, where R is the number of full maps and s = 9 − (sites + re-measured + flagged × full-map sites) is the saving per wafer: about 22 wafers per full map on usual lots. If one lot in ten were like lot 1, full maps for its wafers would cost more than the plan saves.
+
 ## Data checks
 
 - **The two instruments agree once aligned.** The 9-site campaign's coordinates turn out to be rotated 180° relative to the 89-site maps. After undoing the turn and a constant 1.06 µm offset, the two instruments agree to 0.047 µm RMS over 657 readings on 73 wafers.
@@ -102,7 +127,8 @@ Notebook 03 makes every remaining choice on the training lots of each fold, by h
 
 ## Known issues
 
-- **All 10 lots were looked at before part 3.** Every setting in part 3 is chosen on training lots, but the questions it asks (the ranges, lot 1) came from earlier results on every lot, and pairing the ranges with the flag was decided after seeing part 3's lot-by-lot coverage. Part 4's training on earlier lots only is the number closest to real use.
+- **All 10 lots were looked at before parts 3 and 4.** Every setting is chosen on training lots, but the questions asked (the ranges, lot 1) came from earlier results on every lot. Two design choices were made after seeing held-out results: pairing the ranges with the flag (part 3) and the floor of one site per shape (part 4). Training on earlier lots only is the number closest to real use.
+- **The flag only catches wafers about as unusual as lot 1.** Lot 1 is in every training set, so it sets the flag's threshold. Learned from earlier lots, the plan passes lot 8's two drift-breaking wafers, which leave-one-lot-out flags.
 - **Lot 1 is unlike the others.** It tilts left to right up to 2.3× more than any other lot, and its cause is unknown. The flag catches most of its wafers, but a flagged wafer still needs a full map. Its wafers also had a higher helium backside flow than any other wafer (tool logs, not used here): a candidate for flagging before anything is measured, found after looking at all lots, so untested.
 - **The chosen-site curve is not smooth** (6 and 8–10 chosen sites do slightly worse than 7). The order comes from the model's predicted error; with 10 lots the real error is noisy.
 - **Many sites close together** (for example all 49 inner sites) still predict the edge worse than the routine 9. Letting neighbouring sites share their leftover helps (0.114 → 0.106 µm) but is not used, because it gains under 1% for realistic plans.
@@ -113,11 +139,11 @@ Notebook 03 makes every remaining choice on the training lots of each fold, by h
 - [x] **Part 1.** Data checks, bad-reading screen, PCA shapes, Bayesian fit with 90% intervals, rival A, leave-one-lot-out testing.
 - [x] **Part 2.** Rivals from no history to full history (a polynomial, a Gaussian process, rival A, rival A plus a Gaussian process); a check on each measured reading; the routine 9 as actually read by the second instrument; training only on earlier lots (forward chaining); lot-resampled error bars; silicon etch depth; position in the lot.
 - [x] **Part 3.** The model chosen on training lots (24 versions); calibrated ranges; the check's threshold by number of sites; a flag for unusual wafers; chosen sites against the routine 9 and random sites.
-- [ ] **Part 4.** Cost: how many fully measured reference wafers are needed, and accuracy against measurement budget.
+- [x] **Part 4.** How many sites, chosen on training lots; the plan learned from earlier lots only; staleness; how many fully measured wafers; cost and break-even; the measurement plan.
 
 ## Run it
 
-- **Colab:** click a badge above, then Runtime → Run all. The data loads straight from this repository, Notebooks 01 and 02 run in under a minute, notebook 03 in about 3 minutes.
+- **Colab:** click a badge above, then Runtime → Run all. The data loads straight from this repository, Notebooks 01 and 02 run in under a minute, notebooks 03 and 04 in about 3 minutes each.
 - **Locally:** `pip install -r requirements.txt`, then open any notebook in `notebooks/`. To redraw the README figures, run `python scripts/readme_figures.py`.
 
 ```
