@@ -116,7 +116,13 @@ Notebook 04 learns the whole plan (model version, range factor, check and flag t
 - **The deployment number.** Learned from earlier lots only, the plan is ×1.10 the leave-one-lot-out error on the same lots (edge ×1.07), inside the 1.25× pass rule set before testing. It flags no wafer of lots 4–10.
 - **Staleness.** A plan frozen after lots 1–3 is 13% worse over lots 4–10 and loses one of the seven lots to the routine 9. It degrades gradually.
 - **How many full maps.** Error falls with every lot of history, with no plateau within the 9 available: at 5 chosen sites, 0.118 µm from 1 lot, 0.091 from 3, 0.070 from 5 and 0.046 from 9. Ranges learned from a single lot hold only 75–80%. Full maps spread over lots beat the same number from one lot (8 wafers: 0.097 vs 0.108 µm, ranges 88% vs 75%).
-- **Cost.** Counted in sites (the dataset has no cost figures). Against the routine 9 with the same model, the plan saves 4 sites per wafer from the first wafer. Against the routine 9 without history, which never sees the edge, the reference maps pay for themselves after N = 89 R / s wafers, where R is the number of full maps and s = 9 − (sites + re-measured + flagged × full-map sites) is the saving per wafer: about 22 wafers per full map on usual lots. If one lot in ten were like lot 1, full maps for its wafers would cost more than the plan saves.
+- **Cost.** Counted in sites (the dataset has no cost figures). Every method gets a budget that counts the full maps it learns from: sites per wafer = sites on the wafer + 89 × full maps ÷ wafers the maps serve. Each method spends it its own best way (the Gaussian-process rivals on sites chosen by their own predicted variance), and the score is the error of the delivered 89-site map.
+  - **Without history, the edge costs nearly a full map:** a Gaussian process on the wafer's own readings needs about 82 sites to match the map my model delivers from 5 (0.044 µm). So the 79 reference maps pay for themselves after 89 × 79 / (82 − 5) ≈ 90 wafers; 3 lots of maps (27) after about 37, for a coarser map (0.095 µm).
+  - **With the same history, the shapes save about 38 sites per wafer:** the average map plus a Gaussian process needs about 43 sites to match my model's 5.
+  - **The volume decides how much history to buy.** From 1,000 wafers per set of maps, my model gives the lowest map error at almost every budget it can reach; its 5-site map costs about 12 sites per wafer, maps included. At 100 wafers, 79 maps cost 70 sites per wafer, and a smaller history is the better buy.
+  - Against the routine 9 with the same model, the plan saves 4 sites per wafer from the first wafer. Against the routine 9 without history, which never sees the edge, the maps pay back after about 22 wafers per full map on usual lots; if one lot in ten were like lot 1, full maps for its wafers would cost more than the plan saves.
+
+![Every method on one budget, full maps included, at three production volumes](figures/part4_budget.png)
 
 ## Data checks
 
@@ -139,11 +145,11 @@ Notebook 04 learns the whole plan (model version, range factor, check and flag t
 - [x] **Part 1.** Data checks, bad-reading screen, PCA shapes, Bayesian fit with 90% intervals, rival A, leave-one-lot-out testing.
 - [x] **Part 2.** Rivals from no history to full history (a polynomial, a Gaussian process, rival A, rival A plus a Gaussian process); a check on each measured reading; the routine 9 as actually read by the second instrument; training only on earlier lots (forward chaining); lot-resampled error bars; silicon etch depth; position in the lot.
 - [x] **Part 3.** The model chosen on training lots (24 versions); calibrated ranges; the check's threshold by number of sites; a flag for unusual wafers; chosen sites against the routine 9 and random sites.
-- [x] **Part 4.** How many sites, chosen on training lots; the plan learned from earlier lots only; staleness; how many fully measured wafers; cost and break-even; the measurement plan.
+- [x] **Part 4.** How many sites, chosen on training lots; the plan learned from earlier lots only; staleness; how many fully measured wafers; a budget plot with every method, full maps included; break-even; the measurement plan.
 
 ## Run it
 
-- **Colab:** click a badge above, then Runtime → Run all. The data loads straight from this repository, Notebooks 01 and 02 run in under a minute, notebooks 03 and 04 in about 3 minutes each.
+- **Colab:** click a badge above, then Runtime → Run all. The data loads straight from this repository, Notebooks 01 and 02 run in under a minute, notebooks 03 and 04 in about 3 to 4 minutes each.
 - **Locally:** `pip install -r requirements.txt`, then open any notebook in `notebooks/`. To redraw the README figures, run `python scripts/readme_figures.py`.
 
 ```
