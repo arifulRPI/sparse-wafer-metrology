@@ -2,9 +2,9 @@
 
 **Predicting a wafer's full etch-depth map from a few measured sites, with an error bar at every site.**
 
-Semester project for MTLE-6730 (Materials Informatics), Rensselaer Polytechnic Institute, Fall 2026 · Ariful Islam · *All four parts done*
+Semester project for MTLE-6730 (Materials Informatics), Rensselaer Polytechnic Institute, Fall 2026 · Ariful Islam · *All five parts done*
 
-Part 1: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/01_core_reconstruction.ipynb) · Part 2: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/02_baselines_and_realism.ipynb) · Part 3: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/03_trust_and_sites.ipynb) · Part 4: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/04_plan_and_cost.ipynb)
+Part 1: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/01_core_reconstruction.ipynb) · Part 2: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/02_baselines_and_realism.ipynb) · Part 3: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/03_trust_and_sites.ipynb) · Part 4: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/04_plan_and_cost.ipynb) · Part 5: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/arifulRPI/sparse-wafer-metrology/blob/main/notebooks/05_the_whole_picture.ipynb)
 
 ## The problem
 
@@ -19,6 +19,27 @@ After a deep-silicon etch, a fab checks the etch depth at a few sites on each wa
 **Measure each wafer at 5 sites chosen by the model, mostly at the edge. Re-measure a reading the input check questions. If the flag says the wafer is unlike past ones, measure its full map; otherwise predict the map with 90% ranges.** Learned only from earlier lots, as a fab would have to, this delivers the full 89-site map to **0.045 µm from 5 sites, against 0.067 µm from the routine 9** with the same model: a third less error from 43% fewer sites, better in 6 of 7 lots and tied on the seventh. On wafers the flag passes, the ranges hold 92%. The model needs fully measured reference wafers, spread over at least 2–3 lots; every added lot lowers the error.
 
 ![The plan's sites, the value of history, and the plan lot by lot](figures/part4_plan.png)
+
+## The whole picture
+
+Notebook 05 reruns every comparison of the project with one model, one input policy and one score: the error of the delivered 89-site map (readings where measured, predictions elsewhere), with every lot held out in turn. Each row below adds one idea, starting from the routine 9 with no history.
+
+![The whole project, one idea per step](figures/part5_ladder.png)
+
+| Question | Answer | The numbers (delivered map error, µm) |
+|---|---|---|
+| Why not just interpolate each wafer's own readings? | Nothing in a wafer's own readings says how deep its edge is. | From the routine 9, a smooth surface gets the inside to 0.39 but misses the edge by 5.3. |
+| Does history help? | Yes, by a factor of 40 to 50. | Same 5 random sites: my model 0.076, polynomial 3.20, Gaussian process 3.99. Better in 10 of 10 lots. |
+| Which kind of history? | Patterns learned from past wafers, not only their average. | Same 5 random sites: 0.076, against 0.141 for the average map and 0.127 for the average map + GP. 10 of 10 lots. |
+| Is the gain from the patterns or from where we measure? | The patterns. My sites help only a model that knows them. | On my 5 chosen sites: my model 0.044, the GP 5.00 (3.99 on random sites), the average map + GP 0.206 (0.127). |
+| Where to measure? | Where the model is least sure, mostly at the edge. | 5 chosen sites beat all 200 random 5-site layouts, and the routine 9 in 10 of 10 lots (0.044 against 0.067). |
+| How many sites? | 5: one per pattern. | 4 chosen sites already match the routine 9 (0.061 against 0.067). From 5 on, the error sits just above the floor (0.044 against 0.035). |
+| Can one wafer's map be trusted? | On wafers like the past, yes. The flag catches the others. | The 90% ranges hold 92% on wafers the flag passes. The flag sends all 9 wafers of the unusual lot 1 (and 2 of lot 8) for a full map. |
+| Does it hold forward in time? | Yes. | Learned from earlier lots only: 0.045 from 5 sites, against 0.067 from the routine 9, within ×1.10 of leave-one-lot-out (part 4). |
+| Does it work with the fab's own instrument? | Yes; the order of the methods holds. | Routine 9 read by the second instrument: my model 0.078, average map + GP 0.114, average map 0.146, polynomial 3.55. |
+| Is the history worth its full maps? | Yes, after about 90 wafers. | Without history, a GP needs about 82 sites per wafer to match my model's 5, so the 79 full maps pay back after about 91 wafers (part 4). |
+
+*The floor: each wafer's level and pattern amounts read off its own full map, as if known exactly. Earlier parts score differently (errors at unmeasured sites only, older model versions), so the same box can read differently there; notebook 05, section 8, lines them up.*
 
 ## Approach
 
@@ -124,6 +145,23 @@ Notebook 04 learns the whole plan (model version, range factor, check and flag t
 
 ![Every method on one budget, full maps included, at three production volumes](figures/part4_budget.png)
 
+## Results, part 5: the whole picture
+
+Before the runs, the project plan laid out one table of runs (every method on every kind of site layout) and sketched the curves it expected. Notebook 05 fills every box and draws the curves, from one run.
+
+![The table of runs, filled in](figures/part5_table.png)
+
+- **Across a row:** each kind of history helps, except a smoothness alone (rival B2), which does worse than the polynomial: far from its readings a Gaussian process falls back to their average and misses the edge's rise.
+- **Shapes or sites (boxes a to d):** on my model's chosen sites the Gaussian process gets worse (5.00 against 3.99 µm on random sites) and so does the average map + GP (0.206 against 0.127), while my model gets better (0.044 against 0.076). With the sites fixed, the patterns are worth a factor of about 100 over the Gaussian process.
+- **Each method on its own best sites** gains little or nothing. The Gaussian process's own rule fills the inside (0.66 µm) and leaves the edge to its average (6.55 µm).
+- **The routine 9** is good inside for every method and only the edge separates them: 5.3–5.7 µm without history, 0.099 with my model.
+
+![The curves expected before the runs, and the result](figures/part5_sketch_vs_result.png)
+
+- **What matched:** my model lowest at every count; rival A flat (more readings only refine its level); chosen sites below the random band from 4 sites on; the second instrument a little worse than the maps; the error falling, then flattening toward a floor.
+- **What did not:** interpolation never crossed the average map (at 13 sites the polynomial is still 16 times worse than rival A). The routine 9 sat inside the random band, not above it: excellent inside (better than every random 9-site layout), blind at the edge (worse than 85% of them). And the edge flattened at the same count as the inside, 5 sites: with fewer sites than patterns some amounts are guessed from the prior, so 3 chosen sites barely beat random ones.
+- **"Pick where it flattens"** was replaced by the rule from part 4 (no worse than the routine 9, never fewer sites than patterns). The curve shows why they agree: the flattening starts at 5.
+
 ## Data checks
 
 - **The two instruments agree once aligned.** The 9-site campaign's coordinates turn out to be rotated 180° relative to the 89-site maps. After undoing the turn and a constant 1.06 µm offset, the two instruments agree to 0.047 µm RMS over 657 readings on 73 wafers.
@@ -146,10 +184,11 @@ Notebook 04 learns the whole plan (model version, range factor, check and flag t
 - [x] **Part 2.** Rivals from no history to full history (a polynomial, a Gaussian process, rival A, rival A plus a Gaussian process); a check on each measured reading; the routine 9 as actually read by the second instrument; training only on earlier lots (forward chaining); lot-resampled error bars; silicon etch depth; position in the lot.
 - [x] **Part 3.** The model chosen on training lots (24 versions); calibrated ranges; the check's threshold by number of sites; a flag for unusual wafers; chosen sites against the routine 9 and random sites.
 - [x] **Part 4.** How many sites, chosen on training lots; the plan learned from earlier lots only; staleness; how many fully measured wafers; a budget plot with every method, full maps included; break-even; the measurement plan.
+- [x] **Part 5.** The whole picture: the table of runs planned before the work, every box filled with one model, one input policy and one score; the expected curves against the result; each method on its own best sites; the floor; the answers on one page.
 
 ## Run it
 
-- **Colab:** click a badge above, then Runtime → Run all. The data loads straight from this repository, Notebooks 01 and 02 run in under a minute, notebooks 03 and 04 in about 3 to 4 minutes each.
+- **Colab:** click a badge above, then Runtime → Run all. The data loads straight from this repository, Notebooks 01 and 02 run in under a minute, notebook 05 in about 2 minutes, notebooks 03 and 04 in about 3 to 4 minutes each.
 - **Locally:** `pip install -r requirements.txt`, then open any notebook in `notebooks/`. To redraw the README figures, run `python scripts/readme_figures.py`.
 
 ```
